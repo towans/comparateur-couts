@@ -20,34 +20,47 @@ else:
 st.markdown("Entrez les informations pour comparer les deux options d’achat.")
 
 produit = st.text_input("Nom du produit (obligatoire)").strip()
-prix_centrale = st.number_input("Prix HT - Centrale d’achat (€)", min_value=0.0, format="%.2f")
-prix_local = st.number_input("Prix HT - Fournisseur local (€)", min_value=0.0, format="%.2f")
+
+# Champs prix en texte pour meilleure UX (effacement auto)
+col1, col2 = st.columns(2)
+with col1:
+    prix_centrale_input = st.text_input("Prix HT - Centrale (€)", value="", key="prix_centrale")
+with col2:
+    prix_local_input = st.text_input("Prix HT - Local (€)", value="", key="prix_local")
 
 # Soumettre
-if st.button("Comparer") and produit:
-    cout_centrale = prix_centrale * 1.187
-    difference = prix_local - cout_centrale
+if st.button("Comparer") and produit and prix_centrale_input and prix_local_input:
+    try:
+        prix_centrale = float(prix_centrale_input.replace(",", "."))
+        prix_local = float(prix_local_input.replace(",", "."))
 
-    if difference > 0:
-        verdict = f"Centrale moins chère de {abs(difference):.2f} €"
-    elif difference < 0:
-        verdict = f"Fournisseur local moins cher de {abs(difference):.2f} €"
-    else:
-        verdict = "Égalité parfaite"
+        cout_centrale = prix_centrale * 1.187
+        difference = prix_local - cout_centrale
 
-    # Mise à jour ou ajout dans l'historique
-    historique_data[produit] = {
-        "Prix centrale (€)": prix_centrale,
-        "Prix local (€)": prix_local,
-        "Centrale après cotisations (€)": round(cout_centrale, 2),
-        "Verdict": verdict
-    }
+        if difference > 0:
+            verdict = f"Centrale moins chère de {abs(difference):.2f} €"
+            st.success(f"✅ {verdict}")
+        elif difference < 0:
+            verdict = f"Fournisseur local moins cher de {abs(difference):.2f} €"
+            st.warning(f"⚠️ {verdict}")
+        else:
+            verdict = "Égalité parfaite"
+            st.info("🤝 Les deux options reviennent au **même prix**.")
 
-    # Sauvegarde du fichier
-    with open(HISTO_PATH, "w", encoding="utf-8") as f:
-        json.dump(historique_data, f, indent=2, ensure_ascii=False)
+        # Mise à jour ou ajout dans l'historique
+        historique_data[produit] = {
+            "Prix centrale (€)": prix_centrale,
+            "Prix local (€)": prix_local,
+            "Centrale après cotisations (€)": round(cout_centrale, 2),
+            "Verdict": verdict
+        }
 
-    st.success(f"Comparaison enregistrée pour **{produit}**")
+        # Sauvegarde du fichier
+        with open(HISTO_PATH, "w", encoding="utf-8") as f:
+            json.dump(historique_data, f, indent=2, ensure_ascii=False)
+
+    except ValueError:
+        st.error("⛔️ Merci d’entrer des nombres valides pour les prix.")
 
 # Affichage de l'historique
 if historique_data:
